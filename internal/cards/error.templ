@@ -1,0 +1,16 @@
+package cards
+
+templ ErrorCard(message string) {
+	<svg
+		width="495"
+		height="120"
+		viewBox="0 0 495 120"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+		role="img"
+	>
+		<rect x="0.5" y="0.5" rx="4.5" height="119" width="494" fill="#fffefe" stroke="#e4e2e2"></rect>
+		<text x="25" y="45" font-family="'Segoe UI', Ubuntu, Sans-Serif" font-weight="600" font-size="20" fill="#cb2431">Something went wrong</text>
+		<text x="25" y="75" font-family="'Segoe UI', Ubuntu, Sans-Serif" font-weight="400" font-size="14" fill="#434d58">{ message }</text>
+	</svg>
+}

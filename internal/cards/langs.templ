@@ -1,0 +1,64 @@
+package cards
+
+templ LangsCard(v LangsView) {
+	<svg
+		width={ itoa(v.Width) }
+		height={ itoa(v.Height) }
+		viewBox={ "0 0 " + itoa(v.Width) + " " + itoa(v.Height) }
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+		role="img"
+	>
+		<rect
+			x="0.5"
+			y="0.5"
+			rx="4.5"
+			height={ itoa(v.Height - 1) }
+			width={ itoa(v.Width - 1) }
+			fill={ v.Opts.BgColor }
+			stroke={ v.Opts.BorderColor }
+			stroke-opacity={ cond(v.Opts.HideBorder, "0", "1") }
+		></rect>
+		if !v.Opts.HideTitle {
+			<text
+				x="25"
+				y="35"
+				font-family="'Segoe UI', Ubuntu, Sans-Serif"
+				font-weight="600"
+				font-size="18"
+				fill={ v.Opts.TitleColor }
+			>{ v.Title }</text>
+		}
+		for i, r := range v.Rows {
+			<g transform={ "translate(25," + itoa(55+v.RowY[i]) + ")" }>
+				<text
+					x="2"
+					y="15"
+					font-family="'Segoe UI', Ubuntu, Sans-Serif"
+					font-weight="400"
+					font-size="14"
+					fill={ v.Opts.TextColor }
+				>{ r.Name } { pctLabel(r.Percent) }</text>
+				<rect
+					x="0"
+					y="25"
+					rx="5"
+					ry="5"
+					height="8"
+					width={ ftoa(float64(v.Width - 50)) }
+					fill={ v.Opts.TextColor }
+					fill-opacity="0.15"
+				></rect>
+				<rect
+					x="0"
+					y="25"
+					rx="5"
+					ry="5"
+					height="8"
+					width={ ftoa(r.BarWidth) }
+					fill={ r.Color }
+				></rect>
+			</g>
+		}
+	</svg>
+}

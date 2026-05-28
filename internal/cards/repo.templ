@@ -1,0 +1,76 @@
+package cards
+
+templ RepoCard(v RepoCardView) {
+	<svg
+		width={ itoa(v.Width) }
+		height={ itoa(v.Height) }
+		viewBox={ "0 0 " + itoa(v.Width) + " " + itoa(v.Height) }
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+		role="img"
+	>
+		<rect
+			x="0.5"
+			y="0.5"
+			rx="4.5"
+			height={ itoa(v.Height - 1) }
+			width={ itoa(v.Width - 1) }
+			fill={ v.Opts.BgColor }
+			stroke={ v.Opts.BorderColor }
+			stroke-opacity={ cond(v.Opts.HideBorder, "0", "1") }
+		></rect>
+		<text
+			x="25"
+			y="35"
+			font-family="'Segoe UI', Ubuntu, Sans-Serif"
+			font-weight="600"
+			font-size="18"
+			fill={ v.Opts.TitleColor }
+		>{ v.Title }</text>
+		for i, line := range v.DescLines {
+			<text
+				x="25"
+				y={ itoa(60 + i*18) }
+				font-family="'Segoe UI', Ubuntu, Sans-Serif"
+				font-weight="400"
+				font-size="14"
+				fill={ v.Opts.TextColor }
+			>{ line }</text>
+		}
+		<g transform={ "translate(25," + itoa(v.Height - 25) + ")" }>
+			if v.Language != "" {
+				<circle cx="0" cy="-4" r="6" fill={ v.LanguageColor }></circle>
+				<text
+					x="13"
+					y="0"
+					font-family="'Segoe UI', Ubuntu, Sans-Serif"
+					font-weight="400"
+					font-size="12"
+					fill={ v.Opts.TextColor }
+				>{ v.Language }</text>
+			}
+			<g transform="translate(120,-12)" fill={ v.Opts.IconColor }>
+				@templ.Raw(v.StarIcon)
+			</g>
+			<text
+				x="142"
+				y="0"
+				font-family="'Segoe UI', Ubuntu, Sans-Serif"
+				font-weight="400"
+				font-size="12"
+				fill={ v.Opts.TextColor }
+			>{ v.Stars }</text>
+			<g transform="translate(180,-12)" fill={ v.Opts.IconColor }>
+				@templ.Raw(v.ForkIcon)
+			</g>
+			<text
+				x="202"
+				y="0"
+				font-family="'Segoe UI', Ubuntu, Sans-Serif"
+				font-weight="400"
+				font-size="12"
+				fill={ v.Opts.TextColor }
+			>{ v.Forks }</text>
+		</g>
+	</svg>
+}

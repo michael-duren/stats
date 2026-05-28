@@ -1,0 +1,8 @@
+bin/
+*_templ.go
+.git/
+.github/
+Makefile
+Dockerfile
+.dockerignore
+**/*_test.go

@@ -1,0 +1,47 @@
+package cards
+
+templ StreakCard(v StreakView) {
+	<svg
+		width={ itoa(v.Width) }
+		height={ itoa(v.Height) }
+		viewBox={ "0 0 " + itoa(v.Width) + " " + itoa(v.Height) }
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+		role="img"
+	>
+		<rect
+			x="0.5"
+			y="0.5"
+			rx="4.5"
+			height={ itoa(v.Height - 1) }
+			width={ itoa(v.Width - 1) }
+			fill={ v.Opts.BgColor }
+			stroke={ v.Opts.BorderColor }
+			stroke-opacity={ cond(v.Opts.HideBorder, "0", "1") }
+		></rect>
+		<line x1={ itoa(v.Div1X) } y1="32" x2={ itoa(v.Div1X) } y2="163" stroke={ v.Opts.TextColor } stroke-opacity="0.2"></line>
+		<line x1={ itoa(v.Div2X) } y1="32" x2={ itoa(v.Div2X) } y2="163" stroke={ v.Opts.TextColor } stroke-opacity="0.2"></line>
+		<!-- Total contributions -->
+		<g text-anchor="middle" font-family="'Segoe UI', Ubuntu, Sans-Serif">
+			<text x={ itoa(v.Col1X) } y="72" font-size="28" font-weight="700" fill={ v.Opts.TitleColor }>{ v.Total }</text>
+			<text x={ itoa(v.Col1X) } y="108" font-size="14" font-weight="700" fill={ v.Opts.TextColor }>Total Contributions</text>
+			<text x={ itoa(v.Col1X) } y="132" font-size="11" fill={ v.Opts.TextColor } fill-opacity="0.7">{ v.TotalRange }</text>
+		</g>
+		<!-- Current streak (ringed) -->
+		<g text-anchor="middle" font-family="'Segoe UI', Ubuntu, Sans-Serif">
+			<circle cx={ itoa(v.Col2X) } cy={ itoa(v.RingCY) } r={ ftoa(v.RingR) } fill="none" stroke={ v.RingColor } stroke-width="5"></circle>
+			<text x={ itoa(v.Col2X) } y={ itoa(v.RingCY + 9) } font-size="28" font-weight="700" fill={ v.Opts.TitleColor }>{ v.Current }</text>
+			<text x={ itoa(v.Col2X) } y="146" font-size="14" font-weight="700" fill={ v.Opts.TitleColor }>Current Streak</text>
+			<text x={ itoa(v.Col2X) } y="166" font-size="11" fill={ v.Opts.TextColor } fill-opacity="0.7">{ v.CurrentRange }</text>
+			<g transform={ "translate(" + itoa(v.Col2X - 10) + ",16)" } fill={ v.Opts.IconColor }>
+				<path d="M10 0c.3 2.2-.9 3.6-2 4.9C6.8 6.3 5.5 7.8 5.5 10a4.5 4.5 0 0 0 9 0c0-1.6-.7-2.7-1.5-3.6.1 1-.6 1.9-1.4 2.2.6-2.2-.6-4.4-1.6-6.1-.5-.9-1-1.7-.5-2.5z"></path>
+			</g>
+		</g>
+		<!-- Longest streak -->
+		<g text-anchor="middle" font-family="'Segoe UI', Ubuntu, Sans-Serif">
+			<text x={ itoa(v.Col3X) } y="72" font-size="28" font-weight="700" fill={ v.Opts.TitleColor }>{ v.Longest }</text>
+			<text x={ itoa(v.Col3X) } y="108" font-size="14" font-weight="700" fill={ v.Opts.TextColor }>Longest Streak</text>
+			<text x={ itoa(v.Col3X) } y="132" font-size="11" fill={ v.Opts.TextColor } fill-opacity="0.7">{ v.LongestRange }</text>
+		</g>
+	</svg>
+}
