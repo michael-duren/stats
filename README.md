@@ -214,6 +214,34 @@ cd infra && tofu output -raw service_url
 State is stored remotely in S3 (`backend "s3"` in `infra/providers.tf`, configured via the
 generated `infra/backend.hcl`) with S3-native locking — no DynamoDB table required.
 
+### How the GitHub token reaches AWS
+
+You only ever set the token as a shell env var (`TF_VAR_github_token`). It travels to the
+running service like this:
+
+```
+export TF_VAR_github_token=ghp_…        # your shell
+        │  (Terraform reads TF_VAR_* into var.github_token)
+        ▼
+infra/apprunner.tf: runtime_environment_variables = { GITHUB_TOKEN = var.github_token }
+        │  (tofu apply writes it into the App Runner service config via the AWS API)
+        ▼
+App Runner injects GITHUB_TOKEN into the container  →  app reads os.Getenv("GITHUB_TOKEN")
+```
+
+Key points:
+
+- The shell env var is only the **source at apply time**. Once applied, AWS keeps its own copy
+  in the service configuration — you don't need the env var set to *run* the service, only to
+  `apply` changes to it.
+- The token comes to rest in two places: **Terraform state** (your S3 bucket — private +
+  encrypted) and the **App Runner service config**. As a `runtime_environment_variables` entry
+  it's stored **plaintext**, readable by anyone with console/API access to the service.
+- **Hardening (optional):** for stronger secrecy, store the token in **SSM Parameter Store**
+  (SecureString) or **Secrets Manager** and switch `apprunner.tf` to
+  `runtime_environment_secrets`, which holds only the parameter ARN — the secret value never
+  sits in the service config. Noted inline in `infra/apprunner.tf`.
+
 ### Shipping changes after the first deploy
 
 ```bash
