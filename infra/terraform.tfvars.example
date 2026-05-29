@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and edit. Do NOT put github_token here — pass it via
+#   export TF_VAR_github_token=ghp_yourtoken
+# so the secret stays out of files.
+
+aws_region = "us-east-1"
+app_name   = "ghstats"
+image_tag  = "latest"
+
+# Lock the instance to one GitHub user; "" serves any username.
+allowed_username = "michael-duren"
+
+# Set to your repo to provision the GitHub Actions OIDC deploy role; "" to skip.
+github_repo = "michael-duren/stats"

@@ -19,9 +19,16 @@ func main() {
 		log.Printf("loaded %d GitHub token(s)", len(tokens))
 	}
 
+	allowed := os.Getenv("ALLOWED_USERNAME")
+	if allowed != "" {
+		log.Printf("locked to a single user: %s", allowed)
+	} else {
+		log.Println("ALLOWED_USERNAME not set; serving any username")
+	}
+
 	gh := github.NewClient(tokens)
 	c := cache.New()
-	srv := server.New(gh, c)
+	srv := server.New(gh, c, allowed)
 
 	addr := ":" + envOr("PORT", "8080")
 	httpServer := &http.Server{

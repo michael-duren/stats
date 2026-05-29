@@ -43,6 +43,20 @@ token the app still runs but is quickly rate-limited.
 Responses set `max-age` / `s-maxage` / `stale-while-revalidate`. The `cache_seconds` query
 param tunes it, clamped to **30 min … 24 h** (default 4 h) to protect the rate limit.
 
+### Single-user mode
+
+By default the app serves cards for any username. Set **`ALLOWED_USERNAME`** to lock an
+instance to one GitHub user — this is the intended way to **host your own**:
+
+- When set, the `username` param becomes optional; if omitted it defaults to the allowed
+  user, and any non-matching `username` is rejected with an error card.
+- The playground UI pre-fills and locks the username field.
+- Leave it unset (or empty) to run an open, multi-user instance.
+
+```bash
+export ALLOWED_USERNAME=michael-duren
+```
+
 ---
 
 ## Endpoints
@@ -56,6 +70,9 @@ param tunes it, clamped to **30 min … 24 h** (default 4 h) to protect the rate
 | `GET /api/pin` | Single pinned repository | `username`, `repo` |
 | `GET /api/gist` | Single gist | `id` |
 | `GET /healthz` | Liveness probe | — |
+
+When `ALLOWED_USERNAME` is set, `username` is optional on the endpoints above (it defaults to
+the allowed user) and a mismatched value is rejected.
 
 ### Common query params (all cards)
 
@@ -111,8 +128,9 @@ committed — they're produced by the build).
 **Prerequisites:** Go 1.25+. (templ itself is run pinned via `go run`, nothing to install.)
 
 ```bash
-export GITHUB_TOKEN=ghp_yourtoken   # optional but strongly recommended
-make run                            # templ generate + go run, listens on :8080
+export GITHUB_TOKEN=ghp_yourtoken      # optional but strongly recommended
+export ALLOWED_USERNAME=michael-duren  # optional — lock to one user (host your own)
+make run                               # templ generate + go run, listens on :8080
 ```
 
 Open <http://localhost:8080> for the playground, or hit an endpoint directly:
@@ -141,41 +159,46 @@ Open <http://localhost:8080> for the playground, or hit an endpoint directly:
 The app is a stateless container listening on `:8080` (`PORT` overrides). App Runner pulls an
 image from ECR, runs it, gives you an HTTPS URL, and autoscales.
 
-### One-time setup
+### One-time setup (Terraform / OpenTofu)
 
-1. **Create the ECR repository:**
-   ```bash
-   aws ecr create-repository --repository-name ghstats --region us-east-1
-   ```
+Infrastructure lives in `infra/` — it provisions the ECR repo, the App Runner service,
+the role App Runner uses to pull from ECR, and (optionally) the GitHub Actions OIDC role.
 
-2. **Build & push the first image** (so the service has something to start from):
-   ```bash
-   make docker-push \
-     AWS_ACCOUNT_ID=123456789012 \
-     AWS_REGION=us-east-1
-   ```
+On Arch, Terraform isn't in the official repos (license change); use OpenTofu
+(`sudo pacman -S opentofu`, CLI `tofu`) or Terraform from the AUR. Commands below use `tofu`.
 
-3. **Create the App Runner service** (Console → App Runner → Create service):
-   - Source: **Container registry → Amazon ECR**, pick the `ghstats:latest` image.
-   - Port: **8080**.
-   - Environment variable: `GITHUB_TOKEN` = your PAT (store as a secret).
-   - Health check path: `/healthz`.
-   - Note the service ARN it creates.
+```bash
+cd infra
+cp terraform.tfvars.example terraform.tfvars     # edit region / allowed_username / github_repo
+export TF_VAR_github_token=ghp_yourtoken          # keep the secret out of files
+
+tofu init
+
+# 1. Create the ECR repo first (App Runner needs an image to exist).
+tofu apply -target=aws_ecr_repository.app
+
+# 2. Push the first image to it.
+cd .. && make docker-push AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text) AWS_REGION=us-east-1
+
+# 3. Create the App Runner service + IAM roles.
+cd infra && tofu apply
+
+tofu output service_url        # your public HTTPS URL
+```
 
 ### Continuous deployment (GitHub Actions)
 
 `.github/workflows/deploy.yml` builds, pushes to ECR, and triggers a new App Runner
-deployment on every push to `main`. It stays dormant until you configure it.
+deployment on every push to `main`. With `github_repo` set in your tfvars, Terraform creates
+the OIDC role for it. Wire it up by adding these **repository Variables** (Settings → Secrets
+and variables → Actions → Variables), reading the values from `tofu output`:
 
-1. Create an IAM role for **GitHub OIDC** trusting `token.actions.githubusercontent.com`,
-   with permissions for `ecr:GetAuthorizationToken`, ECR push, and `apprunner:StartDeployment`.
-2. Add these **repository Variables** (Settings → Secrets and variables → Actions → Variables):
-   | Variable | Value |
-   |---|---|
-   | `AWS_REGION` | e.g. `us-east-1` |
-   | `AWS_ROLE_ARN` | the OIDC role ARN |
-   | `ECR_REPO` | `ghstats` |
-   | `APPRUNNER_SERVICE_ARN` | the service ARN from step 3 above |
+| Variable | Source |
+|---|---|
+| `AWS_REGION` | your region, e.g. `us-east-1` |
+| `AWS_ROLE_ARN` | `tofu output github_ci_role_arn` |
+| `ECR_REPO` | `ghstats` |
+| `APPRUNNER_SERVICE_ARN` | `tofu output apprunner_service_arn` |
 
 Once `APPRUNNER_SERVICE_ARN` is set, the deploy workflow activates automatically.
 
@@ -193,3 +216,4 @@ push and pull request.
 | `PORT` | `8080` | Listen port |
 | `GITHUB_TOKEN` | — | Single GitHub PAT |
 | `PAT_1`, `PAT_2`, … | — | Multiple PATs, rotated for more rate-limit budget |
+| `ALLOWED_USERNAME` | — | Locks the instance to one GitHub username (empty = serve any) |

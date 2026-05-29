@@ -5,11 +5,15 @@ package web
 import (
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 
 	"ghstats/internal/themes"
 )
+
+// allowedUsername mirrors the server's single-user lock for the playground UI.
+var allowedUsername = strings.TrimSpace(os.Getenv("ALLOWED_USERNAME"))
 
 // CardType is one selectable card in the playground form.
 type CardType struct {
@@ -32,8 +36,9 @@ var endpoints = map[string]string{
 
 // IndexData is the model for the landing page.
 type IndexData struct {
-	Cards  []CardType
-	Themes []string
+	Cards      []CardType
+	Themes     []string
+	LockedUser string // non-empty when the instance is locked to one username
 }
 
 // PreviewData is the model for the HTMX preview fragment.
@@ -46,7 +51,7 @@ type PreviewData struct {
 
 // Index renders the playground landing page.
 func Index(w http.ResponseWriter, r *http.Request) {
-	data := IndexData{Cards: cardTypes, Themes: sortedThemes()}
+	data := IndexData{Cards: cardTypes, Themes: sortedThemes(), LockedUser: allowedUsername}
 	_ = IndexPage(data).Render(r.Context(), w)
 }
 
@@ -54,6 +59,9 @@ func Index(w http.ResponseWriter, r *http.Request) {
 func Preview(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	username := strings.TrimSpace(q.Get("username"))
+	if allowedUsername != "" {
+		username = allowedUsername
+	}
 	card := q.Get("card")
 	theme := q.Get("theme")
 	showIcons := q.Get("show_icons") == "on" || q.Get("show_icons") == "true"

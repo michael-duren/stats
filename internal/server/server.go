@@ -28,12 +28,33 @@ const (
 
 // Server wires the GitHub client and cache into HTTP handlers.
 type Server struct {
-	gh    *github.Client
-	cache *cache.TTL
+	gh      *github.Client
+	cache   *cache.TTL
+	allowed string // if set, the only username this instance will serve
 }
 
-func New(gh *github.Client, c *cache.TTL) *Server {
-	return &Server{gh: gh, cache: c}
+func New(gh *github.Client, c *cache.TTL, allowedUsername string) *Server {
+	return &Server{gh: gh, cache: c, allowed: strings.TrimSpace(allowedUsername)}
+}
+
+// resolveUsername applies the single-user lock. When ALLOWED_USERNAME is unset
+// the supplied param is used (and must be present). When it is set, the param
+// is optional but, if given, must match; a mismatch is rejected so URLs stay
+// honest rather than silently serving the owner's card.
+func (s *Server) resolveUsername(w http.ResponseWriter, r *http.Request, param string) (string, bool) {
+	param = strings.TrimSpace(param)
+	if s.allowed == "" {
+		if param == "" {
+			s.writeError(w, r, "missing ?username", errorCacheSeconds)
+			return "", false
+		}
+		return param, true
+	}
+	if param == "" || strings.EqualFold(param, s.allowed) {
+		return s.allowed, true
+	}
+	s.writeError(w, r, "this instance only serves cards for "+s.allowed, errorCacheSeconds)
+	return "", false
 }
 
 // Routes returns the configured HTTP handler.
@@ -55,9 +76,8 @@ func (s *Server) Routes() http.Handler {
 
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	username := strings.TrimSpace(firstParam(q, "username", "u"))
-	if username == "" {
-		s.writeError(w, r, "missing ?username", errorCacheSeconds)
+	username, ok := s.resolveUsername(w, r, firstParam(q, "username", "u"))
+	if !ok {
 		return
 	}
 
@@ -78,9 +98,8 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleTopLangs(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	username := strings.TrimSpace(firstParam(q, "username", "u"))
-	if username == "" {
-		s.writeError(w, r, "missing ?username", errorCacheSeconds)
+	username, ok := s.resolveUsername(w, r, firstParam(q, "username", "u"))
+	if !ok {
 		return
 	}
 	opts := parseOptions(q)
@@ -98,9 +117,8 @@ func (s *Server) handleTopLangs(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleStreak(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	username := strings.TrimSpace(firstParam(q, "username", "u"))
-	if username == "" {
-		s.writeError(w, r, "missing ?username", errorCacheSeconds)
+	username, ok := s.resolveUsername(w, r, firstParam(q, "username", "u"))
+	if !ok {
 		return
 	}
 	opts := parseOptions(q)
@@ -116,10 +134,13 @@ func (s *Server) handleStreak(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePin(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	username := strings.TrimSpace(firstParam(q, "username", "u"))
+	username, ok := s.resolveUsername(w, r, firstParam(q, "username", "u"))
+	if !ok {
+		return
+	}
 	repo := strings.TrimSpace(q.Get("repo"))
-	if username == "" || repo == "" {
-		s.writeError(w, r, "missing ?username and ?repo", errorCacheSeconds)
+	if repo == "" {
+		s.writeError(w, r, "missing ?repo", errorCacheSeconds)
 		return
 	}
 	opts := parseOptions(q)
