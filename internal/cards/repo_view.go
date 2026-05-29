@@ -1,8 +1,8 @@
 package cards
 
 import (
-	"ghstats/internal/github"
-	"ghstats/internal/render"
+	"github.com/michael-duren/stats/internal/github"
+	"github.com/michael-duren/stats/internal/render"
 )
 
 // RepoCardView is the shared model for the pin and gist cards (same visual

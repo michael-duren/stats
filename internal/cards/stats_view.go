@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 
-	"ghstats/internal/github"
+	"github.com/michael-duren/stats/internal/github"
 )
 
 type statRow struct {

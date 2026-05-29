@@ -13,10 +13,10 @@ import (
 
 	"github.com/a-h/templ"
 
-	"ghstats/internal/cache"
-	"ghstats/internal/cards"
-	"ghstats/internal/github"
-	"ghstats/internal/web"
+	"github.com/michael-duren/stats/internal/cache"
+	"github.com/michael-duren/stats/internal/cards"
+	"github.com/michael-duren/stats/internal/github"
+	"github.com/michael-duren/stats/internal/web"
 )
 
 const (

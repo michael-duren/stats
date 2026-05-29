@@ -16,7 +16,7 @@ const (
 	graphqlEndpoint = "https://api.github.com/graphql"
 	restBase        = "https://api.github.com"
 	// userAgent is mandatory: GitHub rejects API requests without one with 403.
-	userAgent = "ghstats"
+	userAgent = "github.com/michael-duren/stats"
 )
 
 // Client talks to the GitHub GraphQL + REST APIs. It rotates across the

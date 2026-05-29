@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"ghstats/internal/github"
+	"github.com/michael-duren/stats/internal/github"
 )
 
 // StreakView is the resolved model for the streak card: three columns —

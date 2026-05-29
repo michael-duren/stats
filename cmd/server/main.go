@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"ghstats/internal/cache"
-	"ghstats/internal/github"
-	"ghstats/internal/server"
+	"github.com/michael-duren/stats/internal/cache"
+	"github.com/michael-duren/stats/internal/github"
+	"github.com/michael-duren/stats/internal/server"
 )
 
 func main() {

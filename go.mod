@@ -1,4 +1,4 @@
-module ghstats
+module github.com/michael-duren/stats
 
 go 1.25
 

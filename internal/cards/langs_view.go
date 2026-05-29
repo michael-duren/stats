@@ -3,7 +3,7 @@ package cards
 import (
 	"fmt"
 
-	"ghstats/internal/github"
+	"github.com/michael-duren/stats/internal/github"
 )
 
 type langRow struct {

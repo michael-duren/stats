@@ -1,6 +1,6 @@
 package cards
 
-import "ghstats/internal/themes"
+import "github.com/michael-duren/stats/internal/themes"
 
 // Options is the resolved, per-request rendering configuration shared by all
 // card types. Colors here are final hex strings (with leading #), already

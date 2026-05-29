@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"ghstats/internal/themes"
+	"github.com/michael-duren/stats/internal/themes"
 )
 
 // allowedUsername mirrors the server's single-user lock for the playground UI.
