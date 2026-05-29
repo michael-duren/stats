@@ -159,31 +159,72 @@ Open <http://localhost:8080> for the playground, or hit an endpoint directly:
 The app is a stateless container listening on `:8080` (`PORT` overrides). App Runner pulls an
 image from ECR, runs it, gives you an HTTPS URL, and autoscales.
 
-### One-time setup (Terraform / OpenTofu)
+Infrastructure lives in `infra/` (Terraform/OpenTofu) and the deploy steps are wrapped by
+the scripts in `scripts/`:
 
-Infrastructure lives in `infra/` — it provisions the ECR repo, the App Runner service,
-the role App Runner uses to pull from ECR, and (optionally) the GitHub Actions OIDC role.
+| Script | Purpose |
+|---|---|
+| `scripts/create-s3.sh` | Bootstrap the remote-state S3 bucket + write `infra/backend.hcl` (run once) |
+| `scripts/bootstrap.sh` | First-time deploy: init backend → create ECR → push first image → create App Runner |
+| `scripts/deploy.sh` | Manual redeploy: build + push a new image, trigger a deployment |
+| `scripts/destroy.sh` | Tear down all Terraform-managed resources (confirms first) |
 
-On Arch, Terraform isn't in the official repos (license change); use OpenTofu
-(`sudo pacman -S opentofu`, CLI `tofu`) or Terraform from the AUR. Commands below use `tofu`.
+Every script takes `AWS_REGION` (default `us-east-1`) and `APP` (default `ghstats`) as
+environment overrides.
+
+### Prerequisites
+
+1. **AWS CLI** configured (`aws sts get-caller-identity` returns your account).
+2. **Docker** working without sudo in your shell — `bootstrap.sh`/`deploy.sh` build the
+   image. (If you just added yourself to the `docker` group, run them from a `newgrp docker`
+   shell until your next login.)
+3. **OpenTofu** (`sudo pacman -S opentofu`, CLI `tofu`) or Terraform from the AUR. The scripts
+   call `tofu`; alias or edit if you use `terraform`.
+4. Make the scripts executable once: `chmod +x scripts/*.sh`.
+
+### First-time deploy (step by step)
 
 ```bash
-cd infra
-cp terraform.tfvars.example terraform.tfvars     # edit region / allowed_username / github_repo
-export TF_VAR_github_token=ghp_yourtoken          # keep the secret out of files
+# 1. Configure variables. Set allowed_username (lock to your GitHub user) and
+#    github_repo (enables the CI deploy role). The token is passed via env so it
+#    never lands in a committed file.
+cp infra/terraform.tfvars.example infra/terraform.tfvars
+$EDITOR infra/terraform.tfvars
+export TF_VAR_github_token=ghp_yourtoken
 
-tofu init
+# 2. Create the S3 bucket that holds Terraform state. This must exist before
+#    `tofu init` can use it, so it's done with the AWS CLI, not Terraform. The
+#    script also writes infra/backend.hcl with the bucket name (which includes
+#    your account id, keeping it globally unique).
+scripts/create-s3.sh
 
-# 1. Create the ECR repo first (App Runner needs an image to exist).
-tofu apply -target=aws_ecr_repository.app
+# 3. Deploy. bootstrap.sh runs the ordered flow that a single `tofu apply` can't:
+#    App Runner refuses to create a service pointing at an image tag that doesn't
+#    exist yet, so the repo is created and an image pushed *before* the service.
+#      init backend -> tofu apply -target ECR -> make docker-push -> tofu apply
+scripts/bootstrap.sh
+```
 
-# 2. Push the first image to it.
-cd .. && make docker-push AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text) AWS_REGION=us-east-1
+`bootstrap.sh` prints the public HTTPS URL at the end; you can re-read it anytime with:
 
-# 3. Create the App Runner service + IAM roles.
-cd infra && tofu apply
+```bash
+cd infra && tofu output -raw service_url
+```
 
-tofu output service_url        # your public HTTPS URL
+State is stored remotely in S3 (`backend "s3"` in `infra/providers.tf`, configured via the
+generated `infra/backend.hcl`) with S3-native locking — no DynamoDB table required.
+
+### Shipping changes after the first deploy
+
+```bash
+scripts/deploy.sh        # build + push a fresh image, then trigger a deployment
+```
+
+This is the manual equivalent of the GitHub Actions workflow below — use it for one-off
+releases or before CI is wired up. To tear everything down (leaves the state bucket):
+
+```bash
+scripts/destroy.sh
 ```
 
 ### Continuous deployment (GitHub Actions)
